@@ -78,6 +78,7 @@ class HecRasHdfParser:
                 return ref
         return None
 
+<<<<<<< codex/create-local-hdf5-viewer-app
 
     @staticmethod
     def _extract_units(attrs: Any) -> str | None:
@@ -94,6 +95,8 @@ class HecRasHdfParser:
                 return str(raw)
         return None
 
+=======
+>>>>>>> main
     def _read_dataset(self, hdf: h5py.File, ref: DatasetRef | None) -> np.ndarray | None:
         if ref is None:
             return None
@@ -185,7 +188,10 @@ class HecRasHdfParser:
                 elif "point" in low or "node" in low:
                     location = "point"
 
+<<<<<<< codex/create-local-hdf5-viewer-app
                 dataset = hdf[ref.path]
+=======
+>>>>>>> main
                 candidates.append(
                     {
                         "name": ref.path.split("/")[-1],
@@ -196,7 +202,10 @@ class HecRasHdfParser:
                         "timesteps": timesteps,
                         "location": location,
                         "kind": "dynamic" if dynamic else "static",
+<<<<<<< codex/create-local-hdf5-viewer-app
                         "units": self._extract_units(dataset.attrs),
+=======
+>>>>>>> main
                     }
                 )
 

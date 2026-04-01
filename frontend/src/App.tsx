@@ -138,7 +138,7 @@ export function App() {
           <h2>Layers</h2>
           <label><input type="checkbox" checked={showCells} onChange={(e) => setShowCells(e.target.checked)} /> Cells</label>
           <label><input type="checkbox" checked={showFaces} onChange={(e) => setShowFaces(e.target.checked)} /> Faces</label>
-          <label><input type="checkbox" checked={showCenters} onChange={(e) => setShowCenters(e.target.checked)} /> Points</label>
+          <label><input type="checkbox" checked={showCenters} onChange={(e) => setShowCenters(e.target.checked)} /> Cell centers</label>
         </section>
 
         <section>

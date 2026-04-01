@@ -7,8 +7,11 @@ export type TreeNode = {
   dtype?: string;
 };
 
+<<<<<<< codex/create-local-hdf5-viewer-app
 export type FeatureType = 'cell' | 'face' | 'point';
 
+=======
+>>>>>>> main
 export type MeshCell = {
   id: number;
   point_indices: number[];
@@ -40,6 +43,7 @@ export type VariableInfo = {
   dtype: string;
   dynamic: boolean;
   timesteps: number;
+<<<<<<< codex/create-local-hdf5-viewer-app
   location: FeatureType;
   kind: 'static' | 'dynamic';
   units?: string | null;
@@ -48,4 +52,8 @@ export type VariableInfo = {
 export type Selection = {
   type: FeatureType;
   id: number;
+=======
+  location: 'cell' | 'face' | 'point';
+  kind: 'static' | 'dynamic';
+>>>>>>> main
 };
