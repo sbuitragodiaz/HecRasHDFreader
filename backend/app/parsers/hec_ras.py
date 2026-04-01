@@ -185,10 +185,8 @@ class HecRasHdfParser:
                 elif "point" in low or "node" in low:
                     location = "point"
 
-<<<<<<< codex/create-local-hdf5-viewer-app
                 dataset = hdf[ref.path]
-=======
->>>>>>> main
+
                 candidates.append(
                     {
                         "name": ref.path.split("/")[-1],
@@ -199,10 +197,7 @@ class HecRasHdfParser:
                         "timesteps": timesteps,
                         "location": location,
                         "kind": "dynamic" if dynamic else "static",
-<<<<<<< codex/create-local-hdf5-viewer-app
                         "units": self._extract_units(dataset.attrs),
-=======
->>>>>>> main
                     }
                 )
 
