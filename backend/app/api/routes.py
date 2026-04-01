@@ -6,11 +6,12 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ..config import DEFAULT_HDF_DIR
 from ..parsers.hec_ras import HecRasHdfParser
 
 router = APIRouter()
 ROOT = Path(__file__).resolve().parents[3]
-EXAMPLES_DIR = ROOT / "HDF_Examples"
+EXAMPLES_DIR = DEFAULT_HDF_DIR
 
 
 class OpenFileRequest(BaseModel):
