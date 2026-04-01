@@ -78,8 +78,6 @@ class HecRasHdfParser:
                 return ref
         return None
 
-<<<<<<< codex/create-local-hdf5-viewer-app
-
     @staticmethod
     def _extract_units(attrs: Any) -> str | None:
         for key in ("Units", "units", "Unit", "unit"):
@@ -95,8 +93,7 @@ class HecRasHdfParser:
                 return str(raw)
         return None
 
-=======
->>>>>>> main
+
     def _read_dataset(self, hdf: h5py.File, ref: DatasetRef | None) -> np.ndarray | None:
         if ref is None:
             return None
