@@ -9,6 +9,8 @@ export type TreeNode = {
 
 export type FeatureType = 'cell' | 'face' | 'point';
 
+export type FeatureType = 'cell' | 'face' | 'point';
+
 export type MeshCell = {
   id: number;
   point_indices: number[];
