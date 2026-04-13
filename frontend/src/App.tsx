@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Viewer3D } from './components/Viewer3D';
 import { TreeView } from './components/TreeView';
 import { api } from './lib/api';
-import type { MeshBundle, Selection, TreeNode, VariableInfo } from './lib/types';
+import type { FeatureType, MeshBundle, Selection, TreeNode, VariableInfo } from './lib/types';
 
 function formatCoord(coord: [number, number] | null | undefined): string {
   if (!coord) return '—';
@@ -12,6 +12,28 @@ function formatCoord(coord: [number, number] | null | undefined): string {
 function formatNumber(value: number | undefined): string {
   if (value === undefined || Number.isNaN(value)) return '—';
   return value.toFixed(4);
+}
+
+function inferDisplayMode(variable: VariableInfo | null, mesh: MeshBundle | null, values: number[]): FeatureType {
+  if (!variable) return 'cell';
+  const isHydro = /(water|depth|velocity|wsel)/i.test(variable.name);
+
+  // Product rule: hydrodynamic scalar fields should generally be inspected on cells.
+  if (isHydro) {
+    if (variable.location === 'face') return 'face';
+    if (variable.location === 'point' && mesh && mesh.geometry.cell_centers.length === mesh.counts.cells) return 'cell';
+    return 'cell';
+  }
+
+  if (variable.location === 'face') return 'face';
+  if (variable.location === 'point') return 'point';
+
+  // Fallback by array length when metadata is ambiguous.
+  if (mesh) {
+    if (values.length === mesh.counts.faces) return 'face';
+    if (values.length === mesh.geometry.cell_centers.length || values.length === mesh.counts.points) return 'point';
+  }
+  return 'cell';
 }
 
 export function App() {
@@ -73,6 +95,23 @@ export function App() {
       });
   }, [filePath, selectedVarPath, timestep]);
 
+  const activeInteractionMode = useMemo(
+    () => inferDisplayMode(selectedVariable, mesh, values),
+    [selectedVariable, mesh, values],
+  );
+
+  useEffect(() => {
+    // Keep support layers available, but ensure the primary visualization layer is visible.
+    if (activeInteractionMode === 'cell') setShowCells(true);
+    if (activeInteractionMode === 'face') setShowFaces(true);
+    if (activeInteractionMode === 'point') setShowCenters(true);
+  }, [activeInteractionMode]);
+
+  useEffect(() => {
+    // Clear stale selection when switching interaction mode.
+    setSelection((prev) => (prev && prev.type !== activeInteractionMode ? null : prev));
+  }, [activeInteractionMode]);
+
   const selectionDetails = useMemo(() => {
     if (!selection || !mesh) return null;
     const variableName = selectedVariable?.name ?? '—';
@@ -86,7 +125,6 @@ export function App() {
         id: cell.id,
         coordinates: cell.center,
         variableName,
-        value: values[cell.id],
         valueWithUnits: `${formatNumber(values[cell.id])}${units}`,
       };
     }
@@ -102,7 +140,6 @@ export function App() {
         id: face.id,
         coordinates: mid,
         variableName,
-        value: values[face.id],
         valueWithUnits: `${formatNumber(values[face.id])}${units}`,
       };
     }
@@ -114,7 +151,6 @@ export function App() {
       id: selection.id,
       coordinates: p,
       variableName,
-      value: values[selection.id],
       valueWithUnits: `${formatNumber(values[selection.id])}${units}`,
     };
   }, [selection, mesh, selectedVariable, values]);
@@ -138,7 +174,10 @@ export function App() {
           <h2>Layers</h2>
           <label><input type="checkbox" checked={showCells} onChange={(e) => setShowCells(e.target.checked)} /> Cells</label>
           <label><input type="checkbox" checked={showFaces} onChange={(e) => setShowFaces(e.target.checked)} /> Faces</label>
-          <label><input type="checkbox" checked={showCenters} onChange={(e) => setShowCenters(e.target.checked)} /> Cell centers</label>
+          <label><input type="checkbox" checked={showCenters} onChange={(e) => setShowCenters(e.target.checked)} /> Points</label>
+          <p style={{ color: '#9ba9c7', margin: '6px 0 0', fontSize: '0.78rem' }}>
+            Active inspect mode: <strong style={{ color: '#e6ebf7' }}>{activeInteractionMode}</strong>
+          </p>
         </section>
 
         <section>
@@ -176,6 +215,7 @@ export function App() {
           values={values}
           valueRange={valueRange}
           variableLocation={selectedVariable?.location ?? null}
+          activeInteractionMode={activeInteractionMode}
           showCells={showCells}
           showFaces={showFaces}
           showCenters={showCenters}
@@ -200,6 +240,7 @@ export function App() {
         <div className="inspect-card compact">
           <div className="inspect-row"><span>Variable</span><strong>{selectedVariable?.name ?? '—'}</strong></div>
           <div className="inspect-row"><span>Location</span><strong>{selectedVariable?.location ?? '—'}</strong></div>
+          <div className="inspect-row"><span>Display</span><strong>{activeInteractionMode}</strong></div>
           <div className="inspect-row"><span>Min</span><strong>{formatNumber(valueRange.min ?? undefined)}</strong></div>
           <div className="inspect-row"><span>Max</span><strong>{formatNumber(valueRange.max ?? undefined)}</strong></div>
           <div className="inspect-row"><span>Units</span><strong>{selectedVariable?.units ?? '—'}</strong></div>

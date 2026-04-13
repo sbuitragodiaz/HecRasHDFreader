@@ -78,6 +78,7 @@ class HecRasHdfParser:
                 return ref
         return None
 
+
     @staticmethod
     def _extract_units(attrs: Any) -> str | None:
         for key in ("Units", "units", "Unit", "unit"):
@@ -92,7 +93,6 @@ class HecRasHdfParser:
                     return str(v)
                 return str(raw)
         return None
-
 
     def _read_dataset(self, hdf: h5py.File, ref: DatasetRef | None) -> np.ndarray | None:
         if ref is None:
@@ -186,7 +186,6 @@ class HecRasHdfParser:
                     location = "point"
 
                 dataset = hdf[ref.path]
-
                 candidates.append(
                     {
                         "name": ref.path.split("/")[-1],

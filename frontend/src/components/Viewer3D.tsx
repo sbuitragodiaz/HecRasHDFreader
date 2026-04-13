@@ -9,6 +9,7 @@ type Props = {
   values: number[];
   valueRange: { min: number | null; max: number | null };
   variableLocation: FeatureType | null;
+  activeInteractionMode: FeatureType;
   showCells: boolean;
   showFaces: boolean;
   showCenters: boolean;
@@ -38,6 +39,7 @@ export function Viewer3D({
   values,
   valueRange,
   variableLocation,
+  activeInteractionMode,
   showCells,
   showFaces,
   showCenters,
@@ -52,10 +54,16 @@ export function Viewer3D({
     const triangleToCell: number[] = [];
     const { min, max } = getRange(valueRange, values);
 
+    const canUsePointAsCell = variableLocation === 'point' && mesh.geometry.cell_centers.length === mesh.geometry.cells.length;
+
     mesh.geometry.cells.forEach((cell) => {
       const poly = cell.point_indices;
       if (poly.length < 3) return;
-      const color = variableLocation === 'cell' ? scalarToColor(values[cell.id], min, max) : new THREE.Color('#3a4664');
+
+      const rawValue = canUsePointAsCell ? values[cell.id] : values[cell.id];
+      const color = activeInteractionMode === 'cell'
+        ? scalarToColor(rawValue, min, max)
+        : new THREE.Color('#3a4664');
 
       for (let i = 1; i < poly.length - 1; i += 1) {
         const tri = [poly[0], poly[i], poly[i + 1]];
@@ -77,7 +85,7 @@ export function Viewer3D({
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     geometry.computeVertexNormals();
     return { geometry, triangleToCell };
-  }, [mesh, values, valueRange, variableLocation]);
+  }, [mesh, values, valueRange, variableLocation, activeInteractionMode]);
 
   const faceData = useMemo(() => {
     if (!mesh) return null;
@@ -104,7 +112,7 @@ export function Viewer3D({
       const b1: [number, number] = [b[0] + nx * halfWidth, b[1] + ny * halfWidth];
       const b2: [number, number] = [b[0] - nx * halfWidth, b[1] - ny * halfWidth];
 
-      const color = variableLocation === 'face' ? scalarToColor(values[face.id], min, max) : new THREE.Color('#d6e5ff');
+      const color = activeInteractionMode === 'face' ? scalarToColor(values[face.id], min, max) : new THREE.Color('#d6e5ff');
       [[a1, b1, b2], [a1, b2, a2]].forEach((tri) => {
         tri.forEach((p) => {
           verts.push(p[0], p[1], 0.18);
@@ -118,7 +126,7 @@ export function Viewer3D({
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     geometry.computeVertexNormals();
     return { geometry, triangleToFace };
-  }, [mesh, values, valueRange, variableLocation]);
+  }, [mesh, values, valueRange, activeInteractionMode]);
 
   const pointData = useMemo(() => {
     if (!mesh) return null;
@@ -127,16 +135,20 @@ export function Viewer3D({
     const positions = new Float32Array(points.flatMap((p) => [p[0], p[1], 0.35]));
     const colors = new Float32Array(
       points.flatMap((_, idx) => {
-        const color = variableLocation === 'point' ? scalarToColor(values[idx], min, max) : new THREE.Color('#f5e6a9');
+        const color = activeInteractionMode === 'point' ? scalarToColor(values[idx], min, max) : new THREE.Color('#f5e6a9');
         return [color.r, color.g, color.b];
       }),
     );
     return { points, positions, colors };
-  }, [mesh, valueRange, values, variableLocation]);
+  }, [mesh, valueRange, values, activeInteractionMode]);
 
   const selectedCell = selection?.type === 'cell' && mesh ? mesh.geometry.cells[selection.id] : null;
   const selectedFace = selection?.type === 'face' && mesh ? mesh.geometry.faces[selection.id] : null;
   const selectedPoint = selection?.type === 'point' && pointData ? pointData.points[selection.id] : null;
+
+  const isCellPickMode = activeInteractionMode === 'cell';
+  const isFacePickMode = activeInteractionMode === 'face';
+  const isPointPickMode = activeInteractionMode === 'point';
 
   return (
     <Canvas camera={{ position: [0, 0, 120], fov: 45 }}>
@@ -148,9 +160,12 @@ export function Viewer3D({
       {showCells && cellData && (
         <mesh
           geometry={cellData.geometry}
+          // Only active layer is raycastable. This prevents support layers from blocking clicks.
+          raycast={isCellPickMode ? undefined : () => null}
           onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+            if (!isCellPickMode) return;
             e.stopPropagation();
-            // Triangulated cells have variable triangle counts; map triangle index back to source cell id.
+            // Triangles are produced per polygon; this lookup maps clicked triangle -> original cell id.
             const triIndex = e.faceIndex ?? -1;
             const cellId = triIndex >= 0 ? cellData.triangleToCell[triIndex] : undefined;
             if (cellId !== undefined) onPick({ type: 'cell', id: cellId });
@@ -163,8 +178,11 @@ export function Viewer3D({
       {showFaces && faceData && (
         <mesh
           geometry={faceData.geometry}
+          raycast={isFacePickMode ? undefined : () => null}
           onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+            if (!isFacePickMode) return;
             e.stopPropagation();
+            // Faces are expanded into quads (two triangles each); map clicked triangle -> source face id.
             const triIndex = e.faceIndex ?? -1;
             const faceId = triIndex >= 0 ? faceData.triangleToFace[triIndex] : undefined;
             if (faceId !== undefined) onPick({ type: 'face', id: faceId });
@@ -176,7 +194,9 @@ export function Viewer3D({
 
       {showCenters && pointData && (
         <points
+          raycast={isPointPickMode ? undefined : () => null}
           onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+            if (!isPointPickMode) return;
             e.stopPropagation();
             if (e.index !== undefined) onPick({ type: 'point', id: e.index });
           }}
